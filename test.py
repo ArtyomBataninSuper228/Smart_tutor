@@ -1,8 +1,13 @@
 import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackContext
 
-# Включаем логирование
+
+def decorator(func):
+    application.add_handler(CommandHandler("start", start))
+
+
+# Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -10,47 +15,65 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"Получена команда /start от {update.effective_user.id}")
-    await update.message.reply_text("🚀 Бот запущен и работает!")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик команды /start"""
+    user = update.effective_user
+    logger.info(f"User {user.id} started the bot")
+    print(f"🚨 ВЫЗВАН /start от {user.first_name} (ID: {user.id})")
+
+    await update.message.reply_text(
+        f"✅ Бот работает! Привет, {user.first_name}!\n"
+        "Используй /help для списка команд"
+    )
 
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"Получено сообщение: {update.message.text}")
-    await update.message.reply_text(f"Вы сказали: {update.message.text}")
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик команды /help"""
+    await update.message.reply_text(
+        "📚 Доступные команды:\n"
+        "/start - Запустить бота\n"
+        "/help - Помощь\n"
+        "/test - Тестовая команда"
+    )
 
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Ошибка: {context.error}")
-    if update and update.message:
-        await update.message.reply_text("Произошла ошибка 😔")
+async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Тестовая команда"""
+    await update.message.reply_text("🔧 Тестовая команда работает!")
+
+
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик текстовых сообщений"""
+    print(f"📩 Получено сообщение: '{update.message.text}'")
+    await update.message.reply_text(f"Эхо: {update.message.text}")
 
 
 def main():
-    # ⚠️ ЗАМЕНИТЕ НА ВАШ ТОКЕН ⚠️
+    # 🔐 ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ ТОКЕН
     BOT_TOKEN = "8215300847:AAHGW-KR6aJhm2uJgBtzdNJAYm093KwjVH0"
 
+    print("🤖 Запуск бота...")
+    print("📱 Напишите /start вашему боту в Telegram")
+
     try:
-        print("🔄 Создаем Application...")
+        # Создаем Application
         application = Application.builder().token(BOT_TOKEN).build()
 
-        print("✅ Добавляем обработчики...")
+        # Добавляем обработчики
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("test", test_command))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-        application.add_error_handler(error_handler)
 
-        print("🚀 Запускаем бота...")
-        print("Бот должен отвечать на команду /start")
-        print("Откройте Telegram и напишите /start вашему боту")
-
+        # ✅ ПРАВИЛЬНЫЕ ПАРАМЕТРЫ для run_polling:
         application.run_polling(
-            drop_pending_updates=True,  # Игнорировать старые сообщения
-            timeout=20,
-            pool_timeout=20
+            drop_pending_updates=True,  # Очистить старые сообщения
+            allowed_updates=Update.ALL_TYPES
         )
 
     except Exception as e:
-        print(f"❌ Критическая ошибка при запуске: {e}")
+        logger.error(f"Ошибка: {e}")
+        print(f"💥 Ошибка: {e}")
 
 
 if __name__ == "__main__":

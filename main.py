@@ -72,7 +72,7 @@ file.close()
 
 bot = telebot.TeleBot('8215300847:AAHGW-KR6aJhm2uJgBtzdNJAYm093KwjVH0')
 print("started")
-@bot.message_handler(commands = ['/start'])
+@bot.message_handler(commands = ['start'])
 def url(message):
     markup = types.InlineKeyboardMarkup()
     btn1 = types.InlineKeyboardButton(text='Ссылка на наш сайт', url='https://habr.com/ru/all/')
@@ -81,4 +81,4 @@ def url(message):
     #print(message.from_user.id)
     bot.send_message(message.from_user.id, "Ну что двоешники, наркоманы, вэйперы? Работать Будем????!", reply_markup = markup)
 
-bot.polling(none_stop=True, interval=0) #обязательная для работы бота часть
+bot.polling(none_stop=False, interval=0) #обязательная для работы бота часть
