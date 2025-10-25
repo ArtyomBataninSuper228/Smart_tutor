@@ -103,7 +103,14 @@ bot = telebot.TeleBot('8215300847:AAHGW-KR6aJhm2uJgBtzdNJAYm093KwjVH0')
 print("started")
 @bot.message_handler(commands = ['start'])
 def url(message):
-    save_teachers_data
+    if message.from_user.id not in Students.keys() and message.from_user.id not in Teachers.keys():
+        markup = types.InlineKeyboardMarkup()
+        btn1 = types.KeyboardButton("Регистрация как ученик")
+        btn2 = types.KeyboardButton("Регистрация как учитель")
+        markup.add(btn1, btn2)
+
+
+
 
 
     """
