@@ -1,2 +1,2 @@
 import pygame
-#Артем педик
+#python-telegram-bot
