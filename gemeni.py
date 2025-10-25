@@ -5,7 +5,7 @@ import time
 
 # Отключаем SSL предупреждения
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
+api_key = "AIzaSyCPMMiv61hM9VDlfdPQJ2tHduJsPi_8tS4"
 
 def get_available_models(api_key):
     """
@@ -100,6 +100,7 @@ def gemini_query_smart(api_key, query, timeout=120):
     except Exception as e:
         return f"❌ Неожиданная ошибка: {e}"
 
+models = get_available_models(api_key)
 
 def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, max_timeout=300):
     """
@@ -144,7 +145,7 @@ def test_gemini_connection(api_key):
 
 # Использование
 if __name__ == "__main__":
-    API_KEY = "AIzaSyCPMMiv61hM9VDlfdPQJ2tHduJsPi_8tS4"  # Замените на ваш ключ
+    API_KEY = api_key  # Замените на ваш ключ
 
     print("🚀 Запуск синхронной версии Gemini API с увеличенным таймаутом")
     print("=" * 60)
