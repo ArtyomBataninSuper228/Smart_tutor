@@ -1,9 +1,15 @@
-
+from json import *
 import telebot
 from telebot import types
 
+
+file = open('themes.json', 'r')
+themes = load(file)
+file.close()
 bot = telebot.TeleBot('8490068257:AAHHp3X_UCTr0N7J7mANk9wDNXcFcttqA38')
-class
+class event():
+    def __init__(self, time, ):
+        pass
 class Teacher():
     def __init__(self, nickname):
         self.classes = []
@@ -12,9 +18,10 @@ class Teacher():
 
 class Class():
     def __init__(self, form):
-        self.Themes = []
+        self.Themes = themes[str(form)]
         self.teachers = []
         self.form = form
+
 
 
 class Student():
