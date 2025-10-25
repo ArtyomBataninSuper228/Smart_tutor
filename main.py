@@ -123,9 +123,17 @@ t2.start()
 
 # Отключаем SSL предупреждения
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+TUTOR_INSTRUCTION = (
+    "Ты — интеллектуальный тьютор и репетитор для школьников 12–17 лет. "
+    "Твоя задача — помогать ученикам понимать школьные предметы, готовиться к проектам, объяснять материал простыми словами. "
+    "Будь дружелюбным, терпеливым и доброжелательным. "
+    "Говори по-русски, как настоящий наставник, адаптируй объяснения под возраст ученика, "
+    "мотивируй к обучению и помогай логически рассуждать. "
+    "Не используй слишком сложные формулировки — твой стиль должен быть понятным, живым и увлекательным. "
+    "Помогай ему шаг за шагом, поясняй идеи, исправляй ошибки и предлагай улучшения."
+)
 
-
-def get_available_models(api_key):
+def get_available_models(api_key, TUTOR_INSTRUCTION):
     """
     Получает список доступных моделей (синхронная версия)
     """
@@ -155,8 +163,8 @@ def get_available_models(api_key):
     except Exception as e:
         print(f"❌ Ошибка: {e}")
         return None
-models = get_available_models(api_key)
-def gemini_query_smart(api_key, query, timeout=120):
+models = get_available_models(api_key, TUTOR_INSTRUCTION)
+def gemini_query_smart(api_key, query, system_instruction, timeout=120):
     """
     Умный запрос с увеличенным таймаутом
     """
@@ -179,24 +187,29 @@ def gemini_query_smart(api_key, query, timeout=120):
 
     # Пробуем первую доступную модель
     model_to_use = available_models[1]
-    print(f"🔄 Использую модель: {model_to_use}")
-    #print(f"⏱️  Таймаут запроса: {timeout} секунд")
-
     url = f"https://generativelanguage.googleapis.com/v1/models/{model_to_use}:generateContent?key={api_key}"
-
     headers = {'Content-Type': 'application/json'}
-    data = {
-        "contents": [{
-            "parts": [{"text": query}]
-        }]
-    }
+
+    # 💬 Псевдо system instruction — как первая подсказка модели
+    contents = []
+    if system_instruction:
+        contents.append({
+            "role": "user",
+            "parts": [{"text": f"[ИНСТРУКЦИЯ ДЛЯ МОДЕЛИ]\n{system_instruction}"}]
+        })
+
+    contents.append({
+        "role": "user",
+        "parts": [{"text": query}]
+    })
+
+    data = {"contents": contents}
 
     try:
         start_time = time.time()
         response = requests.post(url, headers=headers, json=data, verify=False, timeout=timeout)
         end_time = time.time()
-
-        #print(f"⏱️  Время выполнения запроса: {end_time - start_time:.2f} секунд")
+        print(f"⏱️  Время выполнения запроса: {end_time - start_time:.2f} секунд")
 
         if response.status_code == 200:
             result = response.json()
@@ -218,7 +231,7 @@ def gemini_query_smart(api_key, query, timeout=120):
         return f"❌ Неожиданная ошибка: {e}"
 
 
-def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, max_timeout=300):
+def gemini_query_with_retry(api_key, query, system_instruction, max_retries=3, initial_timeout=60,  max_timeout=300):
     """
     Запрос с повторными попытками и прогрессивным увеличением таймаута
     """
@@ -227,7 +240,7 @@ def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, m
 
         #print(f"🔄 Попытка {attempt + 1}/{max_retries}, таймаут: {timeout} секунд")
 
-        result = gemini_query_smart(api_key, query, timeout)
+        result = gemini_query_smart(api_key, query, system_instruction, timeout )
 
         if not result.startswith("❌ Таймаут запроса"):
             return result
@@ -296,6 +309,8 @@ if __name__ == "__main__":
 '''
 
 
+
+
 #Настройка бота
 bot = telebot.TeleBot('8215300847:AAHGW-KR6aJhm2uJgBtzdNJAYm093KwjVH0')
 print("started")
@@ -329,12 +344,17 @@ def func(message):
             api_key,
             message.text,
             max_retries=3,
+            system_instruction=TUTOR_INSTRUCTION,
             initial_timeout=300,
             max_timeout=3000  # 5 минут максимальный таймаут
             )
-
-            for i in textwrap.wrap(response, 10000):
-                bot.send_message(message.chat.id, i)
+            sm = 0
+            print(response)
+            print(textwrap.wrap(response, 200))
+            for i in textwrap.wrap(response, 2000):
+                sm += len(i)
+                bot.send_message(message.chat.id, i, parse_mode='HTML')
+            #bot.send_message(message.chat.id, response[sm: len(response)])
 
 
 
