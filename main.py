@@ -1,4 +1,6 @@
 from json import *
+
+import math
 import telebot
 from telebot import types
 from threading import Thread
@@ -6,6 +8,7 @@ import requests
 import urllib3
 import json
 import time
+import textwrap
 
 from gemeni import api_key
 
@@ -153,7 +156,6 @@ def get_available_models(api_key):
         print(f"❌ Ошибка: {e}")
         return None
 models = get_available_models(api_key)
-
 def gemini_query_smart(api_key, query, timeout=120):
     """
     Умный запрос с увеличенным таймаутом
@@ -176,7 +178,7 @@ def gemini_query_smart(api_key, query, timeout=120):
         raise "❌ Нет моделей, поддерживающих generateContent"
 
     # Пробуем первую доступную модель
-    model_to_use = available_models[0]
+    model_to_use = available_models[1]
     print(f"🔄 Использую модель: {model_to_use}")
     #print(f"⏱️  Таймаут запроса: {timeout} секунд")
 
@@ -194,26 +196,26 @@ def gemini_query_smart(api_key, query, timeout=120):
         response = requests.post(url, headers=headers, json=data, verify=False, timeout=timeout)
         end_time = time.time()
 
-        print(f"⏱️  Время выполнения запроса: {end_time - start_time:.2f} секунд")
+        #print(f"⏱️  Время выполнения запроса: {end_time - start_time:.2f} секунд")
 
         if response.status_code == 200:
             result = response.json()
             if result.get('candidates'):
                 return result['candidates'][0]['content']['parts'][0]['text']
             else:
-                raise "❌ Пустой ответ от модели"
+                return "❌ Пустой ответ от модели"
         else:
             error_text = response.text
-            raise f"❌ Ошибка API ({response.status_code}): {error_text}"
+            return f"❌ Ошибка API ({response.status_code}): {error_text}"
 
     except requests.exceptions.Timeout:
-        raise f"❌ Таймаут запроса ({timeout} секунд)"
+        return f"❌ Таймаут запроса ({timeout} секунд)"
     except requests.exceptions.ConnectionError:
-        raise "❌ Ошибка соединения"
+        return "❌ Ошибка соединения"
     except requests.exceptions.RequestException as e:
-        raise f"❌ Ошибка запроса: {e}"
+        return f"❌ Ошибка запроса: {e}"
     except Exception as e:
-        raise f"❌ Неожиданная ошибка: {e}"
+        return f"❌ Неожиданная ошибка: {e}"
 
 
 def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, max_timeout=300):
@@ -223,7 +225,7 @@ def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, m
     for attempt in range(max_retries):
         timeout = min(initial_timeout * (2 ** attempt), max_timeout)  # Экспоненциальный backoff
 
-        print(f"🔄 Попытка {attempt + 1}/{max_retries}, таймаут: {timeout} секунд")
+        #print(f"🔄 Попытка {attempt + 1}/{max_retries}, таймаут: {timeout} секунд")
 
         result = gemini_query_smart(api_key, query, timeout)
 
@@ -232,7 +234,7 @@ def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, m
 
         if attempt < max_retries - 1:
             wait_time = 5 * (attempt + 1)
-            print(f"⏳ Жду {wait_time} секунд перед повторной попыткой...")
+            #print(f"⏳ Жду {wait_time} секунд перед повторной попыткой...")
             time.sleep(wait_time)
 
     raise "❌ Все попытки завершились таймаутом"
@@ -307,6 +309,7 @@ def start(message):
 
 @bot.message_handler(content_types=['text'])
 def func(message):
+    print(message.text)
     if(message.text == "Регистрация как Ученик"):
         if message.from_user.id  in Students or message.from_user.id in Teachers.keys():
             bot.send_message(message.chat.id, text="Вы  уже зарагестрированы")
@@ -320,7 +323,19 @@ def func(message):
             return
         teacher = Teacher(message.from_user.id)
         bot.send_message(message.chat.id, text="Вы зарегестрированы")
+
     else:
+            response = gemini_query_with_retry(
+            api_key,
+            message.text,
+            max_retries=3,
+            initial_timeout=300,
+            max_timeout=3000  # 5 минут максимальный таймаут
+            )
+
+            for i in textwrap.wrap(response, 10000):
+                bot.send_message(message.chat.id, i)
+
 
 
 
@@ -336,5 +351,5 @@ def func(message):
     print(message.from_user.id)
     bot.send_message(message.from_user.id, "Ну что двоешники, наркоманы, вэйперы? Работать Будем????!", reply_markup = markup)
     """
-
-bot.polling(none_stop=True, interval=1000) #обязательная для работы бота часть
+print("start_polling")
+bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
