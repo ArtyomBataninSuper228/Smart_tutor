@@ -140,4 +140,4 @@ def func(message):
     bot.send_message(message.from_user.id, "Ну что двоешники, наркоманы, вэйперы? Работать Будем????!", reply_markup = markup)
     """
 
-bot.polling(none_stop=False, interval=0) #обязательная для работы бота часть
+bot.polling(none_stop=True, interval=1000) #обязательная для работы бота часть
