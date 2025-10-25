@@ -90,7 +90,6 @@ def open_students_data(filename= "students.json"):
             student.from_json(data[i])
         file.close()
 
-
 #Загрузка данных
 file = open('themes.json', 'r')
 themes = load(file)
