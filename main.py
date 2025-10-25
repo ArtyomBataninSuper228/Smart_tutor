@@ -19,6 +19,7 @@ class Teacher():
         self.classes = []
         self.subjects = []
         self. nickname = nickname
+        self.name = ""
         Teachers[self.nickname] = self
     def toJSON(self):
             return dumps(self.__dict__)
@@ -63,12 +64,14 @@ class Student():
         self.Class = None
         self.nickname = nickname
         self.studing_plan = {}
+        self.name = ""
         Students[self.nickname] = self
 
-        def toJSON(self):
+
+    def toJSON(self):
             return dumps(self.__dict__)
 
-        def fromJSON(self, json_data):
+    def fromJSON(self, json_data):
             self.__dict__.update(loads(json_data))
 
 
@@ -101,14 +104,29 @@ t2.start()
 
 bot = telebot.TeleBot('8215300847:AAHGW-KR6aJhm2uJgBtzdNJAYm093KwjVH0')
 print("started")
-@bot.message_handler(commands = ['start'])
-def url(message):
-    if message.from_user.id not in Students.keys() and message.from_user.id not in Teachers.keys():
-        markup = types.InlineKeyboardMarkup()
-        btn1 = types.KeyboardButton("Регистрация как ученик")
-        btn2 = types.KeyboardButton("Регистрация как учитель")
-        markup.add(btn1, btn2)
+@bot.message_handler(commands=['start'])
+def start(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton("Регистрация как Ученик")
+    btn2 = types.KeyboardButton("Регистрация как Учитель")
+    markup.add(btn1, btn2)
+    bot.send_message(message.chat.id, text="Здравствуйте, вы ещё не зарегестрированы в системе".format(message.from_user), reply_markup=markup)
 
+@bot.message_handler(content_types=['text'])
+def func(message):
+    if(message.text == "Регистрация как Ученик"):
+        if message.from_user.id  in Students or message.from_user.id in Teachers.keys():
+            bot.send_message(message.chat.id, text="Вы  уже зарагестрированы")
+            return
+        student = Student(message.from_user.id)
+        bot.send_message(message.chat.id, text="Вы зарегестрированы")
+
+    elif(message.text == "Регистрация как Учитель"):
+        if message.from_user.id in Students or message.from_user.id in Teachers.keys():
+            bot.send_message(message.chat.id, text="Вы  уже зарагестрированы")
+            return
+        teacher = Teacher(message.from_user.id)
+        bot.send_message(message.chat.id, text="Вы зарегестрированы")
 
 
 
