@@ -1,6 +1,10 @@
 import requests
-import ssl
+import urllib3
 import json
+import time
+
+# Отключаем SSL предупреждения
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_available_models(api_key):
@@ -10,8 +14,8 @@ def get_available_models(api_key):
     url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
 
     try:
-        # Отключаем проверку SSL для избежания ошибок сертификатов
-        response = requests.get(url, verify=False)
+        # Увеличиваем таймаут для получения моделей
+        response = requests.get(url, verify=False, timeout=60)
 
         if response.status_code == 200:
             models_data = response.json()
@@ -27,14 +31,17 @@ def get_available_models(api_key):
             print(f"❌ Ошибка получения моделей: {response.status_code} - {response.text}")
             return None
 
+    except requests.exceptions.Timeout:
+        print("❌ Таймаут при получении списка моделей (60 секунд)")
+        return None
     except Exception as e:
         print(f"❌ Ошибка: {e}")
         return None
 
 
-def gemini_query_smart(api_key, query):
+def gemini_query_smart(api_key, query, timeout=120):
     """
-    Умный запрос, который сначала проверяет доступные модели (синхронная версия)
+    Умный запрос с увеличенным таймаутом
     """
     print("🔍 Получаю список доступных моделей...")
     models = get_available_models(api_key)
@@ -56,6 +63,7 @@ def gemini_query_smart(api_key, query):
     # Пробуем первую доступную модель
     model_to_use = available_models[0]
     print(f"🔄 Использую модель: {model_to_use}")
+    print(f"⏱️  Таймаут запроса: {timeout} секунд")
 
     url = f"https://generativelanguage.googleapis.com/v1/models/{model_to_use}:generateContent?key={api_key}"
 
@@ -67,7 +75,11 @@ def gemini_query_smart(api_key, query):
     }
 
     try:
-        response = requests.post(url, headers=headers, json=data, verify=False, timeout=30)
+        start_time = time.time()
+        response = requests.post(url, headers=headers, json=data, verify=False, timeout=timeout)
+        end_time = time.time()
+
+        print(f"⏱️  Время выполнения запроса: {end_time - start_time:.2f} секунд")
 
         if response.status_code == 200:
             result = response.json()
@@ -80,9 +92,35 @@ def gemini_query_smart(api_key, query):
             return f"❌ Ошибка API ({response.status_code}): {error_text}"
 
     except requests.exceptions.Timeout:
-        return "❌ Таймаут запроса"
+        return f"❌ Таймаут запроса ({timeout} секунд)"
+    except requests.exceptions.ConnectionError:
+        return "❌ Ошибка соединения"
+    except requests.exceptions.RequestException as e:
+        return f"❌ Ошибка запроса: {e}"
     except Exception as e:
-        return f"❌ Ошибка: {e}"
+        return f"❌ Неожиданная ошибка: {e}"
+
+
+def gemini_query_with_retry(api_key, query, max_retries=3, initial_timeout=60, max_timeout=300):
+    """
+    Запрос с повторными попытками и прогрессивным увеличением таймаута
+    """
+    for attempt in range(max_retries):
+        timeout = min(initial_timeout * (2 ** attempt), max_timeout)  # Экспоненциальный backoff
+
+        print(f"🔄 Попытка {attempt + 1}/{max_retries}, таймаут: {timeout} секунд")
+
+        result = gemini_query_smart(api_key, query, timeout)
+
+        if not result.startswith("❌ Таймаут запроса"):
+            return result
+
+        if attempt < max_retries - 1:
+            wait_time = 5 * (attempt + 1)
+            print(f"⏳ Жду {wait_time} секунд перед повторной попыткой...")
+            time.sleep(wait_time)
+
+    return "❌ Все попытки завершились таймаутом"
 
 
 def test_gemini_connection(api_key):
@@ -97,8 +135,8 @@ def test_gemini_connection(api_key):
         print("❌ Не удалось подключиться к API")
         return False
 
-    # Затем тестируем запрос
-    test_response = gemini_query_smart(api_key, "Привет! Ответь одним словом: 'работает'")
+    # Затем тестируем запрос с увеличенным таймаутом
+    test_response = gemini_query_smart(api_key, "Привет! Ответь одним словом: 'работает'", timeout=60)
     print(f"📝 Тестовый ответ: {test_response}")
 
     return "работает" in test_response.lower()
@@ -108,13 +146,8 @@ def test_gemini_connection(api_key):
 if __name__ == "__main__":
     API_KEY = "AIzaSyCPMMiv61hM9VDlfdPQJ2tHduJsPi_8tS4"  # Замените на ваш ключ
 
-    # Отключаем SSL предупреждения
-    import urllib3
-
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    print("🚀 Запуск синхронной версии Gemini API")
-    print("=" * 50)
+    print("🚀 Запуск синхронной версии Gemini API с увеличенным таймаутом")
+    print("=" * 60)
 
     # Тестируем подключение
     if test_gemini_connection(API_KEY):
@@ -127,7 +160,16 @@ if __name__ == "__main__":
                 break
 
             if user_query.strip():
-                response = gemini_query_smart(API_KEY, user_query)
+                print("⏳ Обрабатываю запрос...")
+
+                # Используем версию с повторными попытками
+                response = gemini_query_with_retry(
+                    API_KEY,
+                    user_query,
+                    max_retries=3,
+                    initial_timeout=300,
+                    max_timeout=3000  # 5 минут максимальный таймаут
+                )
                 print(f"\n🤖 Ответ: {response}")
     else:
         print("\n❌ Не удалось установить соединение с Gemini API")
