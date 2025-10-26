@@ -646,6 +646,8 @@ def func(message):
         parts = splitter.split_message(response, "HTML")
         for i in parts:
             bot.send_message(message.chat.id, i)
+    elif message.text == "delete":
+        Students.pop(message.from_user.id)
 
 
 
@@ -715,4 +717,8 @@ def func(message):
     bot.send_message(message.from_user.id, "Ну что двоешники, наркоманы, вэйперы? Работать Будем????!", reply_markup = markup)
     """
 print("start_polling")
-bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
+while 1:
+    try:
+        bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
+    except Exception as e:
+        pass
