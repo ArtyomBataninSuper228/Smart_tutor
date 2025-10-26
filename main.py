@@ -324,19 +324,22 @@ def start(message):
 
 @bot.message_handler(content_types=['text'])
 def func(message):
-    print(message.text)
     if(message.text == "Регистрация как Ученик"):
         if message.from_user.id  in Students or message.from_user.id in Teachers.keys():
             bot.send_message(message.chat.id, text="Вы  уже зарагестрированы")
             return
         student = Student(message.from_user.id)
-        bot.send_message(message.chat.id, text="Вы зарегестрированы")
+        bot.send_message(message.chat.id, text="Укажите ваш класс")
+        for i in range(5, 12):
+            btn1 = types.KeyboardButton(str(i))
+        #bot.send_message(message.chat.id, text="Вы зарегестрированы")
 
     elif(message.text == "Регистрация как Учитель"):
         if message.from_user.id in Students or message.from_user.id in Teachers.keys():
             bot.send_message(message.chat.id, text="Вы  уже зарагестрированы")
             return
         teacher = Teacher(message.from_user.id)
+
         bot.send_message(message.chat.id, text="Вы зарегестрированы")
 
     else:
